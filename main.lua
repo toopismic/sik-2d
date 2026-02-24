@@ -1,38 +1,96 @@
-local SIK2D = require("SIK2D")
+-- SiD2D Example Game
 
-SIK2D:init(800, 600, true)
+-- Создаем объекты
+player = newRect("player", 100, 100, 50)
+enemy = newCircle("enemy", 300, 200, 30)
+bonus = newTriangle("bonus", 500, 400, 40)
 
-local house = SIK2D:newRect("house", 100, 100, 200, 150, false)
-local roofLeft = SIK2D:newLine("roofLeft", 80, 100, 180, 50)
-local roofRight = SIK2D:newLine("roofRight", 180, 50, 280, 100)
-local window = SIK2D:newRect("window", 150, 150, 40, 40, true)
-local door = SIK2D:newRect("door", 200, 180, 40, 70, false)
-local sun = SIK2D:newCircle("sun", 500, 80, 40)
-local title = SIK2D:newText("title", 300, 30, "MY HOUSE")
+-- Создаем файл с данными
+newFile("save.txt", "Score: 0|Level: 1")
 
-house.char = '#'
-window.char = 'O'
-door.char = '='
-sun.char = '@'
-roofLeft.char = '/'
-roofRight.char = '\\'
+-- Читаем файл
+getFile("save.txt", "gameData")
 
-SIK2D:draw()
+-- Переменные
+local score = 0
+local health = 100
+local gameOver = false
+local enemies = createList()
+enemies[1] = enemy
 
-local myWindow = SIK2D:find("window")
-if myWindow then
-    myWindow:move(30, 0)
+-- Сообщение при старте
+newS("Game Started!")
+
+-- Функция старта
+function start()
+    print("Game initialized")
 end
 
-local grass = SIK2D:newLine("grass", 50, 280, 750, 280)
-grass.char = '_'
+-- Функция обновления
+function update()
+    if gameOver then return end
+    
+    -- Движение игрока за мышкой
+    if getMouse() == 1 then
+        player:setPosition(mouseX, mouseY)
+    end
+    
+    -- Проверка столкновений
+    if checkCollision(player, enemy) then
+        health = health - 10
+        newS("Health: " .. health)
+        
+        if health <= 0 then
+            gameOver = true
+            newS("GAME OVER! Score: " .. score)
+        end
+    end
+    
+    -- Обновление счета
+    score = score + 1
+end
 
-print("\n=== After moving window ===\n")
-SIK2D:draw()
+-- Обработка тапов
+tap("player", function()
+    newS("Player tapped! Health: " .. health)
+end)
 
-SIK2D:save("mydom.lua")
+tap("enemy", function()
+    newS("Enemy tapped!")
+    enemy:setPosition(400, 300)
+    score = score + 50
+end)
 
-print("\n=== Scene objects ===")
-for _, obj in ipairs(SIK2D.objects) do
-    print(obj.tag .. ": " .. obj.name .. " (" .. obj.x .. "," .. obj.y .. ")")
+tap("bonus", function()
+    newS("Bonus collected! +100")
+    score = score + 100
+    bonus:stop()  -- Прячем бонус
+    
+    -- Показываем через 3 секунды
+    wait(3, function()
+        bonus:start()
+    end)
+end)
+
+-- Вспомогательные функции
+function checkCollision(obj1, obj2)
+    local x1,y1 = obj1:getPosition()
+    local x2,y2 = obj2:getPosition()
+    local dx = math.abs(x1 - x2)
+    local dy = math.abs(y1 - y2)
+    return dx < 50 and dy < 50
+end
+
+function wait(seconds, callback)
+    local start = os.clock()
+    while os.clock() - start < seconds do
+        -- Простая задержка
+    end
+    callback()
+end
+
+-- Сохранение игры
+function saveGame()
+    newFile("save.txt", "Score: " .. score .. "|Health: " .. health)
+    newS("Game saved!")
 end
